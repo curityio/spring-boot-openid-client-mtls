@@ -1,4 +1,4 @@
-# OAuth 2.0 Client with Spring Boot and mutual TLS client authentication
+# OAuth 2.0 Client with Spring Boot and mutual TLS Client Authentication
 This repository contains an example implementation that demonstrate how to use Spring Boot and Spring Security to create an OAuth 2.0 Client that authenticates to the Curity Identity Server using mutual TLS.
 
 There are only two things to consider when configuring the client in the Curity Identity Server:
@@ -53,7 +53,7 @@ client:
     key-store-password: Secr3t
 ```
 
-## Run the application
+## Run the Application
 To start the application run 
 
 ```bash
