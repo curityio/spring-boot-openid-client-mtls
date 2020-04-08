@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org">
+<head>
+	<title>OAuth 2.0 Demo Client</title>
+	<meta charset="utf-8" />
+</head>
+<body>
+
+<h1>Your Login Details</h1>
+<div>
+	Welcome <span style="font-weight:bold" th:text="${userName}"/>!
+	You logged in at the OAuth 2.0 Client <span style="font-weight:bold" th:text="${clientName}"/>.
+</div>
+<div>&nbsp;</div>
+<h2>Scopes in Access Token</h2>
+<div>
+	<ul>
+		<li th:each="scope : ${scopes}">
+			<span th:text="${scope}"/>
+		</li>
+	</ul>
+</div>
+<div>&nbsp;</div>
+<h2>Claims in ID Token</h2>
+<div>
+	<ul>
+		<li th:each="claim : ${userClaims}">
+			<span style="font-weight:bold" th:text="${claim.key}"/>: <span th:text="${claim.value}"/>
+		</li>
+	</ul>
+</div>
+</body>
+</html>
