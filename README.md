@@ -12,7 +12,7 @@ The redirect uri is the path of the application where the Curity Identity Server
 For mutual TLS client authentication to work you need a client certificate. Create a Java keystore with the self-signed certificate.
 
 ```bash
-keytool -genkey -alias demo-client -keyalg RSA -keysize 4096 -keystore demo-client.keystore -storepass Secr3t -validity 10 -dname "CN=demo-client, OU=Example, O=Curity AB, C=SE"
+keytool -genkey -alias demo-client -keyalg RSA -keysize 4096 -keystore demo-client.keystore -storepass Secr3t -validity 10 -dname "CN=demo-client, OU=Example, O=Curity AB, C=SE" -storetype PKCS12
 ```
 
 Export the certificate and use it to configure the client at the Curity Identity Server.
@@ -20,6 +20,8 @@ Export the certificate and use it to configure the client at the Curity Identity
 ```bash
 keytool -export -alias demo-client -keystore demo-client.keystore -storepass Secr3t -file demo-client.cer 
 ```
+
+> *NOTE* This should be placed in `src/main/resources`. See below for details.
 
 ## Configure application.yml
 Update the client registration and provider to fit your setup.

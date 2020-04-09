@@ -20,9 +20,11 @@ import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
+import reactor.netty.resources.ConnectionProvider;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.TrustManagerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,6 +33,10 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
+import java.util.concurrent.TimeUnit;
 
 import static org.springframework.security.config.Customizer.withDefaults;
 
@@ -49,47 +55,51 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SslContextBuilder sslContextBuilder(@Value("${client.ssl.key-store}") String keyStorePath,
-                                               @Value("${client.ssl.key-store-password}") String keyStorePassword)
+    public SslContextBuilder sslContextBuilder(@Value("${http.client.ssl.key-store}") String keyStorePath,
+                                               @Value("${http.client.ssl.key-store-password}") String keyStorePassword)
             throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException, UnrecoverableKeyException {
 
-        KeyStore clientKeyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+        KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
         KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
 
         try (InputStream ksFileInputStream = new ClassPathResource(keyStorePath).getInputStream()) {
-            clientKeyStore.load(ksFileInputStream, keyStorePassword.toCharArray());
-            keyManagerFactory.init(clientKeyStore, keyStorePassword.toCharArray());
+            keyStore.load(ksFileInputStream, keyStorePassword.toCharArray());
+            keyManagerFactory.init(keyStore, keyStorePassword.toCharArray());
+            trustManagerFactory.init(keyStore);
         }
 
-        SslContextBuilder sslContextBuilder = SslContextBuilder
+        return SslContextBuilder
                 .forClient()
-                .keyManager(keyManagerFactory);
-
-        return sslContextBuilder;
+                .keyManager(keyManagerFactory)
+                .trustManager(trustManagerFactory);
     }
 
     WebClient createWebClient(SslContext sslContext) {
         HttpClient nettyClient = HttpClient
-                .create()
+                .create(ConnectionProvider.create("small-test-pool", 3))
                 .wiretap(true)
-                .secure(sslContextSpec -> sslContextSpec.sslContext(sslContext));
+                .secure(sslContextSpec -> sslContextSpec.sslContext(sslContext)
+                        .handshakeTimeout(Duration.of(2, ChronoUnit.SECONDS)));
 
         ClientHttpConnector clientConnector = new ReactorClientHttpConnector(nettyClient);
 
-        WebClient mtlsWebClient = WebClient
+        return WebClient
                 .builder()
                 .clientConnector(clientConnector)
                 .build();
-
-        return mtlsWebClient;
     }
 
     @Bean
-    ReactiveOAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> reactiveOAuth2AccessTokenResponseClientWithMtls(SslContextBuilder sslContextBuilder) throws SSLException {
-        var mtlsClient = new WebClientReactiveAuthorizationCodeTokenResponseClient();
+    ReactiveOAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> reactiveOAuth2AccessTokenResponseClientWithMtls(
+            SslContextBuilder sslContextBuilder) throws SSLException {
+
+        WebClientReactiveAuthorizationCodeTokenResponseClient mtlsClient = new
+                WebClientReactiveAuthorizationCodeTokenResponseClient();
 
         WebClient mtlsWebClient = createWebClient(sslContextBuilder.build());
         mtlsClient.setWebClient(mtlsWebClient);
+
         return mtlsClient;
     }
 
