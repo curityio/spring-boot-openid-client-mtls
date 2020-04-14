@@ -49,10 +49,28 @@ spring:
 Place the keystore created above in the `resources` folder and configure the SSL/TLS settings for the client.
 
 ```yaml
-client:
-  ssl:
-    key-store: demo-client.keystore
-    key-store-password: Secr3t
+custom:
+  client:
+    ssl:
+      key-store: demo-client.keystore
+      key-store-password: Secr3t
+```
+
+## Trust Server Certificate
+The application, in particular the underlying WebClients that handle the requests to the OAuth 2.0 server namely to the Curity Identity Server, must trust the certificate provided by the server. Put the server certificate in a trust store:
+
+```bash
+keytool -import -file myServer.cert -alias myServer -keystore idsvr.truststore
+```
+
+Configure the trust store for the oauth client:
+
+```yaml
+custom:
+    client:
+      ssl: 
+        trust-store: myServer.cert
+        trust-store-password: changeit
 ```
 
 ## Run the Application
@@ -75,6 +93,15 @@ Check out the related tutorial of this repository:
 * [OIDC Client with Mutual TLS Client Authentication](https://curity.io/resources/tutorials/howtos/writing-clients/oidc-spring-boot-mtls-auth/)
 
 Read up on [OAuth 2.0 Mutual TLS Client Authentication](https://curity.io/resources/architect/oauth/oauth-client-authentication-mutual-tls/)
+
+## Implementation Notes
+Spring Security OAuth 2.0 implementation does not support Mutual TLS Client Authentication out of the box and some work-arounds are necessary. This is why this example will only work with clients that run the "Code Flow". Further, any changes in the provider settings such as additional endpoints will most likely require adaption. 
+
+However, most of the customization is required because of the trust store. If you don't mind a global trust in your application you may consider using the following JVM arguments:
+
+```bash
+-Djavax.net.ssl.trustStore=/full/path/to/myServer.truststore -Djavax.net.ssl.trustStorePassword=changeit
+```
 
 ## Licensing
 
