@@ -40,7 +40,7 @@ public class TrustStoreConfig {
         KeyStore trustStore = KeyStore.getInstance(trustStoreType);
         TrustManagerFactory trustManagerFactory = null;
 
-        if (!trustStorePath.isBlank()) {
+        if (trustStorePath != null && !trustStorePath.isEmpty()) {
             trustManagerFactory = TrustManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
             try (InputStream ksFileInputStream = new ClassPathResource(trustStorePath).getInputStream()) {
                 trustStore.load(ksFileInputStream, trustStorePassword.toCharArray());
