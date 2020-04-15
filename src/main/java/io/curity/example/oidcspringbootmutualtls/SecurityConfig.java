@@ -2,12 +2,12 @@ package io.curity.example.oidcspringbootmutualtls;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import org.springframework.boot.web.server.Ssl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.client.reactive.ClientHttpConnector;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.oauth2.client.endpoint.OAuth2AuthorizationCodeGrantRequest;
 import org.springframework.security.oauth2.client.endpoint.OAuth2RefreshTokenGrantRequest;
@@ -37,28 +37,32 @@ import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 
-import static org.springframework.security.config.Customizer.withDefaults;
-import static org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder.withJwkSetUri;
-
 /**
- * This class configures the security setting for the application.
- * There are several web clients involved in the different parts of the OAuth 2.0 flow.
- * Every web client must trust the OAuth 2.0 server certificate and be updated with a custom trust store (if so configured).
- * Every web client making a request to the OAuth 2.0 server that requires authentication must be setup for mutual TLS.
- *
- * Note: This configuration will only work for OAuth 2.0 clients that use the authorization code flow and refresh tokens.
- *
- * Take into account that this example will significantly change when the following issue gets solved:
+ * This class configures the security setting for the application.<br/>
+ * There are several web clients involved in an OAuth 2.0 flow.<br/>
+ * Every web client must trust the OAuth 2.0 server certificate.
+ * Every web client making a request to the OAuth 2.0 server that requires authentication must be setup for mutual TLS.<br/>
+ * <p/>
+ * <b>NOTE:</b> This configuration will only work for OAuth 2.0 clients that use the authorization code flow and refresh tokens.<br/>
+ * <p/>
+ * Take into account that this example will significantly change when the following issue gets solved:<br/>
  * - https://github.com/spring-projects/spring-security/issues/4498
  */
 @Configuration
 @Import(TrustStoreConfig.class)
 public class SecurityConfig {
 
-    private final TrustStoreConfig trustStoreConfig;
+    /**
+     * Configuration of a custom trust store.
+     */
+    private final TrustStoreConfig customTrustStoreConfig;
 
-    public SecurityConfig(TrustStoreConfig trustStoreConfig) {
-        this.trustStoreConfig = trustStoreConfig;
+    /**
+     * Load the configuration of the custom trust store.
+     * @param trustStoreConfig
+     */
+    public SecurityConfig(final TrustStoreConfig trustStoreConfig) {
+        this.customTrustStoreConfig = trustStoreConfig;
     }
 
     @Bean
@@ -68,12 +72,13 @@ public class SecurityConfig {
                         exchanges
                                 .anyExchange().authenticated()
                 )
-                .oauth2Login(withDefaults());
+                .oauth2Login(Customizer.withDefaults());
         return http.build();
     }
 
+
     /**
-     * Creates a jwt/id token decoder factory that uses the given trust for retrieving the JWKS.
+     * Creates a jwt/id token decoder factory that uses the configured trust for retrieving the JWKS.<br/>
      * If no trust was configured use default implementation instead.
      *
      * @return
@@ -84,7 +89,7 @@ public class SecurityConfig {
      */
     @Bean
     ReactiveJwtDecoderFactory<ClientRegistration> jwtDecoderFactory() throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException {
-        TrustManagerFactory trustManagerFactory = trustStoreConfig.trustManagerFactory();
+        TrustManagerFactory trustManagerFactory = customTrustStoreConfig.trustManagerFactory();
         if (trustManagerFactory != null) {
             SslContext sslContext = SslContextBuilder
                     .forClient()
@@ -98,7 +103,7 @@ public class SecurityConfig {
     }
 
     /**
-     * Creates an access token response client that handles the authorization code flow.
+     * Creates an access token response client that handles the authorization code flow.<br/>
      * This client supports mutual TLS and therefore requires a client certificate and key.
      *
      * @return
@@ -121,7 +126,7 @@ public class SecurityConfig {
     }
 
     /**
-     * Create an access token response client that handles the refresh token flow.
+     * Create an access token response client that handles the refresh token flow.<br/>
      * This client supports mutual TLS and therefore requires a client certificate and key.
      *
      * @return
@@ -145,7 +150,8 @@ public class SecurityConfig {
     }
 
     /**
-     * Creates the prerequisites for mutual TLS. This method adds the client certificate and corresponding key as well as a custom trust store to the context.
+     * Creates the prerequisites for mutual TLS. <br/>
+     * This method adds the client certificate and key as well as a custom trust store to the context.<br/>
      * If no custom trust store was configured JVM default settings are used.
      *
      * @return
@@ -156,11 +162,11 @@ public class SecurityConfig {
      * @throws IOException
      */
     private SslContext createMutualTlsContext() throws UnrecoverableKeyException, CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException {
-        TrustManagerFactory trustManagerFactory = trustStoreConfig.trustManagerFactory();
+        TrustManagerFactory trustManagerFactory = customTrustStoreConfig.trustManagerFactory();
 
         SslContextBuilder sslContextBuilder = SslContextBuilder
                 .forClient()
-                .keyManager(trustStoreConfig.keyManagerFactory());
+                .keyManager(customTrustStoreConfig.keyManagerFactory());
 
         if (trustManagerFactory != null) {
             sslContextBuilder.trustManager(trustManagerFactory);
@@ -170,7 +176,9 @@ public class SecurityConfig {
     }
 
     /**
-     * Create a web client with the given ssl context. That way you can add custom trust or client certificate to the web client.
+     * Create a web client with the given ssl context.<br/>
+     * That way you can add custom trust or client certificate to the web client.
+     *
      * @param sslContext
      * @return
      */
@@ -191,8 +199,11 @@ public class SecurityConfig {
     }
 
     /**
-     * Based on {@link ReactiveOidcIdTokenDecoderFactory}
-     * Returns a jwtDecoder with an updated webClient. Works only when jwkSetUri is configured and no MAC based algorithm was used.
+     * Based on {@link ReactiveOidcIdTokenDecoderFactory}<br/>
+     * This is a workaround because of this issue: <br/>
+     * - https://github.com/spring-projects/spring-security/issues/8365 <br/>
+     * Returns a jwtDecoder with an updated webClient. <br/>
+     * Works only when jwkSetUri is available and no MAC based algorithm was used.
      */
     private class UpdatedReactiveJwtDecoderFactory implements ReactiveJwtDecoderFactory<ClientRegistration> {
 
@@ -205,9 +216,19 @@ public class SecurityConfig {
         @Override
         public ReactiveJwtDecoder createDecoder(ClientRegistration clientRegistration) {
             String jwkSetUri = clientRegistration.getProviderDetails().getJwkSetUri();
-            NimbusReactiveJwtDecoder jwtDecoder = withJwkSetUri(jwkSetUri).webClient(createWebClient(sslContext)).build();
-            jwtDecoder.setClaimSetConverter(new ClaimTypeConverter(ReactiveOidcIdTokenDecoderFactory.createDefaultClaimTypeConverters()));
-            jwtDecoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(new JwtTimestampValidator(), new OidcIdTokenValidator(clientRegistration)));
+            NimbusReactiveJwtDecoder jwtDecoder = NimbusReactiveJwtDecoder
+                    .withJwkSetUri(jwkSetUri)
+                    .webClient(createWebClient(sslContext))
+                    .build();
+            jwtDecoder.setClaimSetConverter(
+                    new ClaimTypeConverter(
+                            ReactiveOidcIdTokenDecoderFactory.createDefaultClaimTypeConverters()
+                    ));
+            jwtDecoder.setJwtValidator(
+                    new DelegatingOAuth2TokenValidator<>(
+                            new JwtTimestampValidator(),
+                            new OidcIdTokenValidator(clientRegistration)
+                    ));
 
             return jwtDecoder;
         }
