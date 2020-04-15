@@ -46,7 +46,7 @@ spring:
             jwkSetUri: https://idsvr.example.com/oauth/anonymous/jwks
 ```
 
-Place the keystore created above in the `resources` folder and configure the SSL/TLS settings for the client.
+Place the keystore created above in the `resources` folder and configure the SSL/TLS settings for the oauth client in `application.yml`:
 
 ```yaml
 custom:
@@ -57,20 +57,21 @@ custom:
 ```
 
 ## Trust Server Certificate
-The application, in particular the underlying WebClients that handle the requests to the OAuth 2.0 server namely to the Curity Identity Server, must trust the certificate provided by the server. Put the server certificate in a trust store:
+The application, in particular the underlying `WebClients` that handle the requests to the OAuth 2.0 server namely to the Curity Identity Server, must trust the certificate provided by the server. Put the server certificate in a truststore:
 
 ```bash
 keytool -import -file myServer.cert -alias myServer -keystore idsvr.truststore
 ```
 
-Configure the trust store for the oauth client:
+Place the truststore in the `resources` folder and update the SSL/TLS settings for the oauth client in `application.yml`:
 
 ```yaml
 custom:
     client:
       ssl: 
-        trust-store: myServer.cert
-        trust-store-password: changeit
+        trust-store: idsvr.truststore
+        #trust-store-password: changeit
+        #trust-store-type: jks
 ```
 
 ## Run the Application
@@ -95,12 +96,12 @@ Check out the related tutorial of this repository:
 Read up on [OAuth 2.0 Mutual TLS Client Authentication](https://curity.io/resources/architect/oauth/oauth-client-authentication-mutual-tls/)
 
 ## Implementation Notes
-Spring Security OAuth 2.0 implementation does not support Mutual TLS Client Authentication out of the box and some work-arounds are necessary. This is why this example will only work with clients that run the "Code Flow". Further, any changes in the provider settings such as additional endpoints will most likely require adaption. 
+Spring Security OAuth 2.0 implementation does not support Mutual TLS Client Authentication out of the box (see [Issue #4498](https://github.com/spring-projects/spring-security/issues/4498) for status). Because of workarounds this example will only work with clients that run the "Code Flow". Further, any changes in the provider settings such as additional endpoints will most likely require adaption. 
 
-However, most of the customization is required because of the trust store. If you don't mind a global trust in your application you may consider using the following JVM arguments:
+However, most of the customization is required because of the truststore. If you don't mind a global trust in your application you may consider using the following JVM arguments instead of `custom.client.ssl.trust-store` in `application.yml`:
 
 ```bash
--Djavax.net.ssl.trustStore=/full/path/to/myServer.truststore -Djavax.net.ssl.trustStorePassword=changeit
+./gradlew bootRun -Djavax.net.ssl.trustStore=/full/path/to/idsvr.truststore -Djavax.net.ssl.trustStorePassword=changeit
 ```
 
 ## Licensing
