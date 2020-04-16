@@ -1,7 +1,6 @@
 package io.curity.example.oidcspringbootmutualtls;
 
 import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -28,12 +27,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.resources.ConnectionProvider;
 
-import javax.net.ssl.TrustManagerFactory;
-import java.io.IOException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
+import javax.net.ssl.SSLException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 
@@ -58,7 +52,7 @@ public class SecurityConfig {
     private final TrustStoreConfig customTrustStoreConfig;
 
     /**
-     * Load the configuration of the custom trust store.
+     * Load the configuration of the custom key and trust store.
      * @param trustStoreConfig
      */
     public SecurityConfig(final TrustStoreConfig trustStoreConfig) {
@@ -82,19 +76,12 @@ public class SecurityConfig {
      * If no trust was configured use default implementation instead.
      *
      * @return
-     * @throws IOException
-     * @throws CertificateException
-     * @throws NoSuchAlgorithmException
-     * @throws KeyStoreException
+     * @throws SSLException
      */
     @Bean
-    ReactiveJwtDecoderFactory<ClientRegistration> jwtDecoderFactory() throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException {
-        TrustManagerFactory trustManagerFactory = customTrustStoreConfig.trustManagerFactory();
-        if (trustManagerFactory != null) {
-            SslContext sslContext = SslContextBuilder
-                    .forClient()
-                    .trustManager(trustManagerFactory)
-                    .build();
+    ReactiveJwtDecoderFactory<ClientRegistration> jwtDecoderFactory() throws SSLException {
+        if (customTrustStoreConfig.isTrustStoreConfigured()) {
+            SslContext sslContext = customTrustStoreConfig.createTrustedTlsContext();
 
             return new UpdatedReactiveJwtDecoderFactory(sslContext);
         } else {
@@ -107,14 +94,11 @@ public class SecurityConfig {
      * This client supports mutual TLS and therefore requires a client certificate and key.
      *
      * @return
-     * @throws IOException
-     * @throws CertificateException
-     * @throws NoSuchAlgorithmException
-     * @throws KeyStoreException
+     * @throws SSLException
      */
     @Bean
-    ReactiveOAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> reactiveOAuth2AccessTokenResponseClientWithMtls() throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableKeyException {
-        SslContext sslContext = createMutualTlsContext();
+    ReactiveOAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> reactiveOAuth2AccessTokenResponseClientWithMtls() throws SSLException {
+        SslContext sslContext = customTrustStoreConfig.createMutualTlsContext();
 
         WebClientReactiveAuthorizationCodeTokenResponseClient mtlsClient = new
                 WebClientReactiveAuthorizationCodeTokenResponseClient();
@@ -130,15 +114,11 @@ public class SecurityConfig {
      * This client supports mutual TLS and therefore requires a client certificate and key.
      *
      * @return
-     * @throws UnrecoverableKeyException
-     * @throws CertificateException
-     * @throws NoSuchAlgorithmException
-     * @throws KeyStoreException
-     * @throws IOException
+     * @throws SSLException
      */
     @Bean
-    ReactiveOAuth2AccessTokenResponseClient<OAuth2RefreshTokenGrantRequest> reactiveOAuth2AccessTokenResponseClientWithMtlsAndRefreshToken() throws UnrecoverableKeyException, CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException {
-        SslContext sslContext = createMutualTlsContext();
+    ReactiveOAuth2AccessTokenResponseClient<OAuth2RefreshTokenGrantRequest> reactiveOAuth2AccessTokenResponseClientWithMtlsAndRefreshToken() throws SSLException {
+        SslContext sslContext = customTrustStoreConfig.createMutualTlsContext();
 
         WebClientReactiveRefreshTokenTokenResponseClient mtlsClient = new
                 WebClientReactiveRefreshTokenTokenResponseClient();
@@ -147,32 +127,6 @@ public class SecurityConfig {
         mtlsClient.setWebClient(mtlsWebClient);
 
         return mtlsClient;
-    }
-
-    /**
-     * Creates the prerequisites for mutual TLS. <br/>
-     * This method adds the client certificate and key as well as a custom trust store to the context.<br/>
-     * If no custom trust store was configured JVM default settings are used.
-     *
-     * @return
-     * @throws UnrecoverableKeyException
-     * @throws CertificateException
-     * @throws NoSuchAlgorithmException
-     * @throws KeyStoreException
-     * @throws IOException
-     */
-    private SslContext createMutualTlsContext() throws UnrecoverableKeyException, CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException {
-        TrustManagerFactory trustManagerFactory = customTrustStoreConfig.trustManagerFactory();
-
-        SslContextBuilder sslContextBuilder = SslContextBuilder
-                .forClient()
-                .keyManager(customTrustStoreConfig.keyManagerFactory());
-
-        if (trustManagerFactory != null) {
-            sslContextBuilder.trustManager(trustManagerFactory);
-        }
-
-        return sslContextBuilder.build();
     }
 
     /**

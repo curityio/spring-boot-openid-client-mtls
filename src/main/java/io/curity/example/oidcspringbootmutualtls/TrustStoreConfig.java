@@ -1,11 +1,13 @@
 package io.curity.example.oidcspringbootmutualtls;
 
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,30 +19,46 @@ import java.security.cert.CertificateException;
 
 @Configuration
 public class TrustStoreConfig {
-    @Value("${custom.client.ssl.trust-store:}")
-    private String trustStorePath;
 
-    @Value("${custom.client.ssl.trust-store-password:}")
-    private String trustStorePassword;
+    private SslContextBuilder mutualTLSContextBuilder;
+    private SslContextBuilder trustedTLSContextBuilder;
 
-    @Value("${custom.client.ssl.trust-store-type:jks}")
-    private String trustStoreType;
+    private boolean isTrustStoreConfigured;
 
-    @Value("${custom.client.ssl.key-store}")
-    private String keyStorePath;
+    public TrustStoreConfig(
+            @Value("${custom.client.ssl.trust-store-type:jks}") String trustStoreType,
+            @Value("${custom.client.ssl.trust-store:}") String trustStorePath,
+            @Value("${custom.client.ssl.trust-store-password:}") String trustStorePassword,
+            @Value("${custom.client.ssl.key-store}") String keyStorePath,
+            @Value("${custom.client.ssl.key-store-password}") String keyStorePassword,
+            @Value("${custom.client.ssl.key-store-type:jks}") String keyStoreType)
+            throws CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException, UnrecoverableKeyException {
 
-    @Value("${custom.client.ssl.key-store-password}")
-    private String keyStorePassword;
+        isTrustStoreConfigured = (trustStorePath != null && !trustStorePath.isEmpty());
 
-    @Value("${custom.client.ssl.key-store-type:jks}")
-    private String keyStoreType;
+        TrustManagerFactory trustManagerFactory = trustManagerFactory(trustStoreType, trustStorePath, trustStorePassword);
 
-    @Bean
-    TrustManagerFactory trustManagerFactory() throws KeyStoreException, NoSuchAlgorithmException, IOException, CertificateException {
+        trustedTLSContextBuilder = SslContextBuilder
+                .forClient();
+
+        if (trustManagerFactory != null) {
+            trustedTLSContextBuilder.trustManager(trustManagerFactory);
+        }
+
+        mutualTLSContextBuilder = SslContextBuilder
+                .forClient()
+                .keyManager(keyManagerFactory(keyStoreType, keyStorePath, keyStorePassword));
+
+        if (trustManagerFactory != null) {
+            mutualTLSContextBuilder.trustManager(trustManagerFactory);
+        }
+    }
+
+    private TrustManagerFactory trustManagerFactory(String trustStoreType, String trustStorePath, String trustStorePassword) throws KeyStoreException, NoSuchAlgorithmException, IOException, CertificateException {
         KeyStore trustStore = KeyStore.getInstance(trustStoreType);
         TrustManagerFactory trustManagerFactory = null;
 
-        if (trustStorePath != null && !trustStorePath.isEmpty()) {
+        if (isTrustStoreConfigured()) {
             trustManagerFactory = TrustManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
             try (InputStream ksFileInputStream = new ClassPathResource(trustStorePath).getInputStream()) {
                 trustStore.load(ksFileInputStream, trustStorePassword.toCharArray());
@@ -51,8 +69,7 @@ public class TrustStoreConfig {
         return trustManagerFactory;
     }
 
-    @Bean
-    public KeyManagerFactory keyManagerFactory() throws KeyStoreException, NoSuchAlgorithmException, IOException, CertificateException, UnrecoverableKeyException {
+    private KeyManagerFactory keyManagerFactory(String keyStoreType, String keyStorePath, String keyStorePassword) throws KeyStoreException, NoSuchAlgorithmException, IOException, CertificateException, UnrecoverableKeyException {
 
         KeyStore clientKeyStore = KeyStore.getInstance(keyStoreType);
         KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
@@ -62,6 +79,34 @@ public class TrustStoreConfig {
             keyManagerFactory.init(clientKeyStore, keyStorePassword.toCharArray());
         }
         return keyManagerFactory;
+    }
+
+    /**
+     * Creates the prerequisites for mutual TLS. <br/>
+     * This method adds the client certificate and key as well as a custom trust store to the context.<br/>
+     * If no custom trust store was configured JVM default settings are used.
+     *
+     * @return Sslcontext with the configured client certificate and trust store
+     * @throws SSLException
+     */
+    public SslContext createMutualTlsContext() throws SSLException {
+        return mutualTLSContextBuilder.build();
+    }
+
+    /**
+     * Creates the prerequisites for TLS with a custom trust store. <br/>
+     * This method adds a custom trust store to the context.<br/>
+     * If no custom trust store was configured JVM default settings are used.
+     *
+     * @return Sslcontext with the configured trust store
+     * @throws SSLException
+     */
+    public SslContext createTrustedTlsContext() throws SSLException {
+        return trustedTLSContextBuilder.build();
+    }
+
+    public boolean isTrustStoreConfigured() {
+        return isTrustStoreConfigured;
     }
 
 }
