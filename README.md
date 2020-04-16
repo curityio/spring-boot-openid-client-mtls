@@ -12,19 +12,58 @@ The redirect uri is the path of the application where the Curity Identity Server
 For mutual TLS client authentication to work you need a client certificate. Create a Java keystore with the self-signed certificate.
 
 ```bash
-keytool -genkey -alias demo-client -keyalg RSA -keysize 4096 -keystore demo-client.keystore -storepass Secr3t -validity 10 -dname "CN=demo-client, OU=Example, O=Curity AB, C=SE" -storetype PKCS12
+keytool -genkey -alias demo-client -keyalg RSA -keysize 4096 -keystore demo-client.keystore -storepass Secr3t -validity 10 -dname "CN=demo-client, OU=Example, O=Curity AB, C=SE"
 ```
 
-Export the certificate and use it to configure the client at the Curity Identity Server.
+Place the key store in `src/main/resources`. See [Configure Application](#configure-application) for details.
+
+Export the certificate and use it to configure the client at the Curity Identity Server. See [Curity Identity Server Configuration](#curity-identity-server-configuration).
 
 ```bash
 keytool -export -alias demo-client -keystore demo-client.keystore -storepass Secr3t -file demo-client.cer 
 ```
 
-> *NOTE* This should be placed in `src/main/resources`. See below for details.
+## Curity Identity Server Configuration
+To run this example you need to setup some configurations in the Curity Identity Server. The easiest way is to download and install the sample configuration from [Curity Developer Portal](https://developer.curity.io/release/latest). This sample configuration already has an authentication profile and an OAuth profile that can be used with this example.
 
-## Configure application.yml
-Update the client registration and provider to fit your setup.
+1. Go to Token Service profile and make sure that `Mutual TLS` is enabled for `Client Authentication` on the `Client Settings` page of that profile.
+
+   ![image](./docs/images/profile-enable-mtls.png)
+ 
+1. Go to the `Clients` page of the profile and create a client called `demo-client`. If you use the sample configuration from [Curity Developer Portal](https://developer.curity.io/release/latest) create the `demo-client` client by copying the example client called `www`.
+   
+   ![image](./docs/images/duplicate-client.png)
+   
+1. This new client (accessible from `Token Service -> Clients -> demo-client -> Edit Client`) uses mutual TLS for client authentication. 
+   * Choose `mutual-tls` from the list of authentication methods.
+   * Select `Trust by a pinned client certificate`.
+   * Click `Create` to upload a client certificate.
+
+   ![image](./docs/images/client-authentication-method.png) 
+
+1. Select the client certificate that you created [above](#create-a-self-signed-certificate). Give the newly created Client Trust Store the name `demo_client` and confirm the settings.
+   
+   ![image](./docs/images/new-client-trust-store.png) 
+   
+   ![image](./docs/images/client-authentication-method-cert.png) 
+   
+1. Continue with the `Capabilities` section for the `demo-client`. Make sure that the list contains at least the `Code Flow` capability.
+   
+   ![image](./docs/images/client-capabilities.png)
+   
+1. Update the `Redirect URIs` setting for the `demo-client`. The redirect URI should be `http://localhost:8080/login/oauth2/code/idsvr`.
+   
+   ![image](./docs/images/client-redirect-uri.png)
+   
+1. Finally, allow Client Authentication for the Token Endpoint. Go to Token Service profile and select `Endpoints`. Look for the `token-service-token` endpoint and set `Client Authentication` to `allowed`.
+ 
+   ![image](./docs/images/endpoints-client-auth.png)
+          
+1. Commit the changes and you are all setup.
+   
+
+## Configure Application
+Update the client registration and provider in `application.yml` to fit your setup. If you followed the instructions in [Curity Identity Server Configuration](#curity-identity-server-configuration) you do not need to change anything.
 
 ```yaml
 spring:
@@ -33,7 +72,7 @@ spring:
       client:
         registration:
           idsvr:
-            client-name: Demo
+            client-name: Spring Boot OAuth 2.0 Demo Client
             client-id: demo-client
             client-authentication-method: none
             authorization-grant-type: authorization_code
@@ -41,9 +80,9 @@ spring:
             scope: openid
         provider:
           idsvr:
-            authorizationUri: https://idsvr.example.com/oauth/authorize
-            tokenUri: https://idsvr.example.com/oauth/token
-            jwkSetUri: https://idsvr.example.com/oauth/anonymous/jwks
+            authorizationUri: https://localhost:8443/oauth/v2/oauth-authorize
+            tokenUri: https://localhost:8443/oauth/v2/oauth-token
+            jwkSetUri: https://localhost:8443/oauth/v2/oauth-anonymous/jwks
 ```
 
 Place the keystore created above in the `resources` folder and configure the SSL/TLS settings for the oauth client in `application.yml`:
@@ -57,13 +96,13 @@ custom:
 ```
 
 ## Trust Server Certificate
-The application, in particular the underlying `WebClients` that handle the requests to the OAuth 2.0 server namely to the Curity Identity Server, must trust the certificate provided by the server. Put the server certificate in a truststore:
+The application, in particular the underlying `WebClients` that handle the requests to the OAuth 2.0 server namely to the Curity Identity Server, must trust the certificate provided by the server. Put the server certificate in a trust store:
 
 ```bash
 keytool -import -file myServer.cert -alias myServer -keystore idsvr.truststore
 ```
 
-Place the truststore in the `resources` folder and update the SSL/TLS settings for the oauth client in `application.yml`:
+Place the trust store in the `resources` folder and update the SSL/TLS settings for the oauth client in `application.yml`:
 
 ```yaml
 custom:
@@ -96,9 +135,9 @@ Check out the related tutorial of this repository:
 Read up on [OAuth 2.0 Mutual TLS Client Authentication](https://curity.io/resources/architect/oauth/oauth-client-authentication-mutual-tls/)
 
 ## Implementation Notes
-Spring Security OAuth 2.0 implementation does not support Mutual TLS Client Authentication out of the box (see [Issue #4498](https://github.com/spring-projects/spring-security/issues/4498) for status). Because of workarounds this example will only work with clients that run the "Code Flow". Further, any changes in the provider settings such as additional endpoints will most likely require adaption. 
+Spring Security OAuth 2.0 implementation does not support Mutual TLS Client Authentication out of the box (see [Issue #4498](https://github.com/spring-projects/spring-security/issues/4498) for status). As a result this example will only work with clients that run the "Code Flow". Further, any changes in the provider settings such as additional endpoints will most likely require adaption. 
 
-However, most of the customization is required because of the truststore. If you don't mind a global trust in your application you may consider using the following JVM arguments instead of `custom.client.ssl.trust-store` in `application.yml`:
+However, most of the customization is required because of the trust store. If you don't mind a global trust in your application you may consider using JVM arguments instead of `custom.client.ssl.trust-store` in `application.yml` and run the application with the following command:
 
 ```bash
 ./gradlew bootRun -Djavax.net.ssl.trustStore=/full/path/to/idsvr.truststore -Djavax.net.ssl.trustStorePassword=changeit
