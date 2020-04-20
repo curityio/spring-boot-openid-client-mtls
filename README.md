@@ -1,5 +1,5 @@
-# OAuth 2.0 Client with Spring Boot and mutual TLS Client Authentication
-This repository contains an example implementation that demonstrate how to use Spring Boot and Spring Security to create an OAuth 2.0 Client that authenticates to the Curity Identity Server using mutual TLS.
+# OpenID Client with Spring Boot and mutual TLS Client Authentication
+This repository contains an example implementation that demonstrate how to use Spring Boot and Spring Security to create an OpenID lient that authenticates to the Curity Identity Server using mutual TLS.
 
 There are only two things to consider when configuring the client in the Curity Identity Server:
 
@@ -72,7 +72,7 @@ spring:
       client:
         registration:
           idsvr:
-            client-name: Spring Boot OAuth 2.0 Demo Client
+            client-name: Spring Boot OpenID Demo Client
             client-id: demo-client
             client-authentication-method: none
             authorization-grant-type: authorization_code
@@ -96,7 +96,7 @@ custom:
 ```
 
 ## Trust Server Certificate
-The application, in particular the underlying `WebClient` implementations that handle the requests to the OAuth 2.0 server namely to the Curity Identity Server, must trust the certificate provided by the server. Put the server certificate in a trust store:
+The application, in particular the underlying `WebClient` implementations that handle the requests to the token server namely to the Curity Identity Server, must trust the certificate provided by the server. Put the server certificate in a trust store:
 
 ```bash
 keytool -import -file localhost.cert -alias myServer -keystore localhost.truststore

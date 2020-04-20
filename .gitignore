@@ -1,5 +1,6 @@
-# Private Keys
+# Key material and certificates
 *.keystore
+*.truststore
 
 # Compiled class file
 *.class

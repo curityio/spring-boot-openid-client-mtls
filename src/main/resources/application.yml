@@ -18,7 +18,7 @@ spring:
       client:
         registration:
           idsvr:
-            client-name: Demo
+            client-name: Spring Boot OpenID Demo Client
             client-id: demo-client
             client-authentication-method: mutual-tls
             authorization-grant-type: authorization_code
@@ -26,7 +26,7 @@ spring:
             scope: openid
         provider:
           idsvr:
-            authorizationUri: https://localhost:8443/oauth/v2/oauth-authorization
+            authorizationUri: https://localhost:8443/oauth/v2/oauth-authorize
             tokenUri: https://localhost:8443/oauth/v2/oauth-token
             jwkSetUri: https://localhost:8443/oauth/v2/oauth-anonymous/jwks
 
