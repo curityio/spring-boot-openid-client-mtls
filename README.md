@@ -96,10 +96,10 @@ custom:
 ```
 
 ## Trust Server Certificate
-The application, in particular the underlying `WebClients` that handle the requests to the OAuth 2.0 server namely to the Curity Identity Server, must trust the certificate provided by the server. Put the server certificate in a trust store:
+The application, in particular the underlying `WebClient` implementations that handle the requests to the OAuth 2.0 server namely to the Curity Identity Server, must trust the certificate provided by the server. Put the server certificate in a trust store:
 
 ```bash
-keytool -import -file myServer.cert -alias myServer -keystore idsvr.truststore
+keytool -import -file localhost.cert -alias myServer -keystore localhost.truststore
 ```
 
 Place the trust store in the `resources` folder and update the SSL/TLS settings for the oauth client in `application.yml`:
@@ -108,10 +108,12 @@ Place the trust store in the `resources` folder and update the SSL/TLS settings 
 custom:
     client:
       ssl: 
-        trust-store: idsvr.truststore
-        #trust-store-password: changeit
+        trust-store: localhost.truststore
+        trust-store-password: changeit
         #trust-store-type: jks
 ```
+
+> **Note** You may use a self signed certificate for the Curity Identity Server but make sure it is a valid certificate for the server name, i.e the certificate must include the hostname of the server in the subject or the list of subject alternative names. The client will otherwise reject the certificate and communication with the server will not work.
 
 ## Run the Application
 To start the application run 
@@ -140,7 +142,7 @@ Spring Security OAuth 2.0 implementation does not support Mutual TLS Client Auth
 However, most of the customization is required because of the trust store. If you don't mind a global trust in your application you may consider using JVM arguments instead of `custom.client.ssl.trust-store` in `application.yml` and run the application with the following command:
 
 ```bash
-./gradlew bootRun -Djavax.net.ssl.trustStore=/full/path/to/idsvr.truststore -Djavax.net.ssl.trustStorePassword=changeit
+./gradlew bootRun -Djavax.net.ssl.trustStore=/full/path/to/localhost.truststore -Djavax.net.ssl.trustStorePassword=changeit
 ```
 
 ## Licensing
