@@ -20,17 +20,20 @@ spring:
           idsvr:
             client-name: Demo
             client-id: demo-client
-            client-authentication-method: none
+            client-authentication-method: mutual-tls
             authorization-grant-type: authorization_code
-            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            redirect-uri: "{baseUrl}/login/oauth2/code/idsvr"
             scope: openid
         provider:
           idsvr:
-            authorizationUri: https://localhost:8443/dev/oauth/authorize
-            tokenUri: https://localhost:8443/dev/oauth/token
-            jwkSetUri: https://localhost:8443/dev/oauth/anonymous/jwks
+            authorizationUri: https://localhost:8443/oauth/v2/oauth-authorization
+            tokenUri: https://localhost:8443/oauth/v2/oauth-token
+            jwkSetUri: https://localhost:8443/oauth/v2/oauth-anonymous/jwks
 
-client:
-  ssl:
-    key-store: demo-client.keystore
-    key-store-password: Secr3t
+custom:
+  client:
+    ssl:
+      key-store: demo-client.keystore
+      key-store-password: Secr3t
+      trust-store: localhost.truststore
+      trust-store-password: changeit
