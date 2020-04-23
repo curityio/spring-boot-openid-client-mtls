@@ -4,15 +4,35 @@ This repository contains an example implementation that demonstrate how to use S
 There are only two things to consider when configuring the client in the Curity Identity Server:
 
 * choose the authentication method `mutual tls` and make sure it uses the self-signed certificate created below. 
-* register the following redirect uri for your client: `http://localhost:8080/login/oauth2/code/idsvr`. 
+* register the following redirect uri for your client: `https://localhost:9443/login/oauth2/code/idsvr`. 
 
 The redirect uri is the path of the application where the Curity Identity Server will redirect to after the user was authenticated. In this case we assume that this example will be hosted on `localhost`. 
 
-## Create a Self-Signed Certificate
+## Create a Self-Signed Server Certificate for HTTPS
+We secure this client application with HTTPS on port `9443` and need a certificate for that. Since this is just an example we create a self-signed certificate. Do not use self-signed certificates in production environments.
+
+```bash
+keytool -genkeypair -alias https -keyalg RSA -keysize 4096 -keystore server.p12 -storepass Secr3t -storetype pkcs12 -validity 10 -dname "CN=localhost, OU=Example, O=Curity AB, C=SE"
+```
+Place the key store `server.p12` in `src/main/resources`. Update the application configuration file `src/main/resources/application.yml` to run HTTPS on port `9443`:
+
+```yaml
+server:
+  port: 9443
+  ssl:
+    key-store: classpath:server.p12
+    key-store-password: Secr3t
+    key-store-type: pkcs12
+    key-store-alias: https
+```
+!!! note "Insecure Certificate"
+    The browser will not trust this self-signed server certificate. You may notice an `SSLHandshakeException` in the console when running this example. Make sure your browser trusts the certificate if you want to get rid of the error.
+    
+## Create a Self-Signed Certificate for MTLS
 For mutual TLS client authentication to work you need a client certificate. Create a Java keystore with the self-signed certificate.
 
 ```bash
-keytool -genkey -alias demo-client -keyalg RSA -keysize 4096 -keystore demo-client.p12 -storepass Secr3t -storetype pkcs12 -validity 10 -dname "CN=demo-client, OU=Example, O=Curity AB, C=SE"
+keytool -genkeypair -alias demo-client -keyalg RSA -keysize 4096 -keystore demo-client.p12 -storepass Secr3t -storetype pkcs12 -validity 10 -dname "CN=demo-client, OU=Example, O=Curity AB, C=SE"
 ```
 
 Place the key store in `src/main/resources`. See [Configure Application](#configure-application) for details.
@@ -51,7 +71,7 @@ To run this example you need to setup some configurations in the Curity Identity
    
    ![image](./docs/images/client-capabilities.png)
    
-1. Update the `Redirect URIs` setting for the `demo-client`. The redirect URI should be `http://localhost:8080/login/oauth2/code/idsvr`.
+1. Update the `Redirect URIs` setting for the `demo-client`. The redirect URI should be `https://localhost:9443/login/oauth2/code/idsvr`.
    
    ![image](./docs/images/client-redirect-uri.png)
    
@@ -97,10 +117,10 @@ custom:
 ```
 
 ## Trust Server Certificate
-The application, in particular the underlying `WebClient` implementations that handle the requests to the token server namely to the Curity Identity Server, must trust the certificate provided by the server. Put the server certificate in a trust store:
+The application, in particular the underlying `WebClient` implementations that handle the requests to the token server namely to the Curity Identity Server, must trust the certificate provided by the server. Put the server certificate (`idsvr.cer`) in a trust store:
 
 ```bash
-keytool -import -file localhost.cer -alias idsvr -keystore idsvr.p12 -storepass changeit -storetype pkcs12 -noprompt
+keytool -import -file idsvr.cer -alias idsvr -keystore idsvr.p12 -storepass changeit -storetype pkcs12 -noprompt
 ```
 
 Place the trust store in the `resources` folder and update the SSL/TLS settings for the oauth client in `application.yml`:
@@ -123,7 +143,7 @@ To start the application run
 ./gradlew bootRun
 ```
 
-Open `http://localhost:8080` in your browser. It will automatically start a login flow.
+Open `https://localhost:9443` in your browser. It will automatically start a login flow.
 
 ## More Information
 More information about OAuth 2.0, OpenID Connect and the Curity Identity Server can be found here:

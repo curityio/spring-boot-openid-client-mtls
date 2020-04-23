@@ -1,5 +1,10 @@
 server:
-  port: 8080
+  port: 9443
+  ssl:
+    key-store: classpath:server.p12
+    key-store-password: Secr3t
+    key-store-type: pkcs12
+    key-store-alias: https
 
 logging:
   level:
