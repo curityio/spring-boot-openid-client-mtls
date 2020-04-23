@@ -12,7 +12,7 @@ The redirect uri is the path of the application where the Curity Identity Server
 For mutual TLS client authentication to work you need a client certificate. Create a Java keystore with the self-signed certificate.
 
 ```bash
-keytool -genkey -alias demo-client -keyalg RSA -keysize 4096 -keystore demo-client.keystore -storepass Secr3t -validity 10 -dname "CN=demo-client, OU=Example, O=Curity AB, C=SE"
+keytool -genkey -alias demo-client -keyalg RSA -keysize 4096 -keystore demo-client.p12 -storepass Secr3t -storetype pkcs12 -validity 10 -dname "CN=demo-client, OU=Example, O=Curity AB, C=SE"
 ```
 
 Place the key store in `src/main/resources`. See [Configure Application](#configure-application) for details.
@@ -20,7 +20,7 @@ Place the key store in `src/main/resources`. See [Configure Application](#config
 Export the certificate and use it to configure the client at the Curity Identity Server. See [Curity Identity Server Configuration](#curity-identity-server-configuration).
 
 ```bash
-keytool -export -alias demo-client -keystore demo-client.keystore -storepass Secr3t -file demo-client.cer 
+keytool -export -alias demo-client -keystore demo-client.p12 -storepass Secr3t -storetype pkcs12 -file demo-client.cer
 ```
 
 ## Curity Identity Server Configuration
@@ -91,15 +91,16 @@ Place the keystore created above in the `resources` folder and configure the SSL
 custom:
   client:
     ssl:
-      key-store: demo-client.keystore
+      key-store: demo-client.p12
       key-store-password: Secr3t
+      key-store-type: pkcs12
 ```
 
 ## Trust Server Certificate
 The application, in particular the underlying `WebClient` implementations that handle the requests to the token server namely to the Curity Identity Server, must trust the certificate provided by the server. Put the server certificate in a trust store:
 
 ```bash
-keytool -import -file localhost.cert -alias myServer -keystore localhost.truststore
+keytool -import -file localhost.cer -alias idsvr -keystore idsvr.p12 -storepass changeit -storetype pkcs12 -noprompt
 ```
 
 Place the trust store in the `resources` folder and update the SSL/TLS settings for the oauth client in `application.yml`:
@@ -108,9 +109,9 @@ Place the trust store in the `resources` folder and update the SSL/TLS settings 
 custom:
     client:
       ssl: 
-        trust-store: localhost.truststore
+        trust-store: idsvr.p12
         trust-store-password: changeit
-        #trust-store-type: jks
+        trust-store-type: pkcs12
 ```
 
 > **Note** You may use a self signed certificate for the Curity Identity Server but make sure it is a valid certificate for the server name, i.e the certificate must include the hostname of the server in the subject or the list of subject alternative names. The client will otherwise reject the certificate and communication with the server will not work.

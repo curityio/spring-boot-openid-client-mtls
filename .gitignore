@@ -1,6 +1,10 @@
 # Key material and certificates
 *.keystore
 *.truststore
+*.p12
+*.cer
+*.pem
+*.crt
 
 # Compiled class file
 *.class

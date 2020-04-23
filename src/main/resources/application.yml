@@ -33,7 +33,9 @@ spring:
 custom:
   client:
     ssl:
-      key-store: demo-client.keystore
+      key-store: demo-client.p12
       key-store-password: Secr3t
-      trust-store: localhost.truststore
+      key-store-type: pkcs12
+      trust-store: idsvr.p12
       trust-store-password: changeit
+      trust-store-type: pkcs12
