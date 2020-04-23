@@ -25,8 +25,7 @@ server:
     key-store-type: pkcs12
     key-store-alias: https
 ```
-!!! note "Insecure Certificate"
-    The browser will not trust this self-signed server certificate. You may notice an `SSLHandshakeException` in the console when running this example. Make sure your browser trusts the certificate if you want to get rid of the error.
+> **Note**: The browser will not trust this self-signed server certificate. You may notice an `SSLHandshakeException` in the console when running this example. Make sure your browser trusts the certificate if you want to get rid of the error.
     
 ## Create a Self-Signed Certificate for MTLS
 For mutual TLS client authentication to work you need a client certificate. Create a Java keystore with the self-signed certificate.
