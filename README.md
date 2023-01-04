@@ -156,9 +156,9 @@ More information about OAuth 2.0, OpenID Connect and the Curity Identity Server 
 * [OpenID Connect](https://curity.io/resources/openid-connect/)
 
 Check out the related tutorial of this repository:
-* [OIDC Client with Mutual TLS Client Authentication](https://curity.io/resources/tutorials/howtos/writing-clients/oidc-spring-boot-mtls-auth/)
+* [OIDC Client with Mutual TLS Client Authentication](https://curity.io/resources/learn/oidc-spring-boot-mtls-auth/)
 
-Read up on [OAuth 2.0 Mutual TLS Client Authentication](https://curity.io/resources/architect/oauth/oauth-client-authentication-mutual-tls/)
+Read up on [OAuth 2.0 Mutual TLS Client Authentication](https://curity.io/resources/learn/oauth-client-authentication-mutual-tls/)
 
 ## Implementation Notes
 Spring Security OAuth 2.0 implementation does not support Mutual TLS Client Authentication out of the box (see [Issue #4498](https://github.com/spring-projects/spring-security/issues/4498) for status). As a result this example will only work with clients that run the "Code Flow". Further, any changes in the provider settings such as additional endpoints will most likely require adaption. 
