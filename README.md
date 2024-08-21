@@ -3,7 +3,7 @@
 [![Quality](https://img.shields.io/badge/quality-demo-red)](https://curity.io/resources/code-examples/status/)
 [![Availability](https://img.shields.io/badge/availability-source-blue)](https://curity.io/resources/code-examples/status/)
 
-This repository contains an example implementation that demonstrate how to use Spring Boot and Spring Security to create an OpenID lient that authenticates to the Curity Identity Server using mutual TLS.
+This repository contains an example implementation that demonstrate how to use Spring Boot and Spring Security to create an OpenID client that authenticates to the Curity Identity Server using mutual TLS.
 
 There are only two things to consider when configuring the client in the Curity Identity Server:
 
